@@ -1,5 +1,8 @@
 """ Particle filtering """
-
+#Erik Kelemen
+#12-14-2020
+#ekelemen
+#113366116
 import random
 import numpy as np
 import bisect
@@ -72,8 +75,16 @@ class ParticleFilter:
         particles = []
 
         # BEGIN_YOUR_CODE ######################################################
-        raise NotImplementedError
-        
+        for i in range(self.num_particles):
+            x = random.randint(self.minx,self.maxx)
+            y = random.randint(self.miny,self.maxy)
+            arr = [x,y]
+            x_orient = random.random() - 0.5
+            y_orient = random.random() - 0.5
+            arr2 = [x_orient, y_orient]
+            pos = np.array(arr)
+            orient = np.array(arr2)
+            particles.append(Particle(pos, orient, 1.0))
         # END_YOUR_CODE ########################################################
 
         return particles
@@ -118,7 +129,14 @@ class ParticleFilter:
         new_particles = []
 
         # BEGIN_YOUR_CODE ######################################################
-        raise NotImplementedError
+        for particle in self.particles:
+            new_particle = self.transition_sample(particle, delta_angle, speed)
+            new_particle.weight = self.compute_prenorm_weight(new_particle,sensor,max_sensor_range,sensor_std,evidence)
+            new_particles.append(new_particle)
+
+        normalize_weights(new_particles)
+        new_particles = self.weighted_sample_w_replacement(new_particles)
+
         #Hint: when computing the weights of each particle, you will probably want
         # to use compute_prenorm_weight to compute an unnormalized weight for each
         # particle individually, and then normalize the weights of all the particles
@@ -143,10 +161,9 @@ class ParticleFilter:
         """
         weight = None
         # BEGIN_YOUR_CODE ######################################################
-        raise NotImplementedError
+        #Evidence is in the form: [reading_up,reading_down,reading_left,reading_right]
+        weight = weight_gaussian_kernel(sensor(particle.pos[0], particle.pos[1], max_sensor_range, std=sensor_std), evidence,std=10)
         #Hint: use the weight_gaussian_kernel method
-
-        
         # END_YOUR_CODE ########################################################
         return weight
 
@@ -162,7 +179,16 @@ class ParticleFilter:
         """
         new_particle = None
         # BEGIN_YOUR_CODE ######################################################
-        raise NotImplementedError
+        #I was getting errors using np.cos and np.sin so i used math instead and it worked fine
+        import math
+        o_x1 = particle.orient[0] * math.cos(delta_angle) + particle.orient[1] * math.sin(delta_angle)
+        o_y1 = -particle.orient[0] * math.sin(delta_angle) + particle.orient[1] * math.cos(delta_angle)
+        p_x1 = particle.pos[0] + o_x1*speed
+        p_y1 = particle.pos[1] + o_y1*speed
+
+        new_particle = Particle(np.array([p_x1, p_y1]), np.array([o_x1, o_y1]), particle.weight)
+        new_particle.add_noise()
+
         #Hint: rotate the orientation by delta_angle, and then move in that
         # direction at the given speed over 1 unit of time. You will need to add
         # noise at the end to simulate stochasticity in dynamics
